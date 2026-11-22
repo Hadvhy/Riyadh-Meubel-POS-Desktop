@@ -361,7 +361,7 @@ const ALL_MENU=[
   {id:'lap',label:'Laporan',ico:'📊',roles:['pemilik','dev']},
   {id:'set',label:'Pengaturan',ico:'⚙',roles:['pemilik','dev']},
   {id:'users',label:'Manajemen Pengguna',ico:'👤',roles:['pemilik','dev']},
-  {id:'stat',label:'Statistik Pengguna',ico:'📈',roles:['pemilik','dev']},
+  {id:'stat',label:'Statistik Pengguna',ico:'📈',roles:['dev']},
   {id:'devtools',label:'Developer Tools',ico:'🛠',roles:['dev']}
 ];
 
@@ -1124,7 +1124,7 @@ function statExport(){
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
 P.stat=()=>{
-  if(!window.CURRENT||!['pemilik','dev'].includes(window.CURRENT.role)) return '<div class="card">Hanya pemilik yang dapat melihat halaman ini.</div>';
+  if(!window.CURRENT||window.CURRENT.role!=='dev') return '<div class="card">Halaman ini tidak tersedia.</div>';
   if(LOGS_ST==='idle'){LOGS_ST='loading';loadLogs()}
   const head='<div class="row" style="align-items:center;margin-bottom:12px"><div style="flex:1;color:var(--muted);font-size:12px">Waktu login, alamat IP, dan perkiraan lokasi (berdasarkan IP) tiap pengguna.</div><button class="btn o" style="flex:none" onclick="LOGS_ST=\'idle\';statRender()">↻ Muat ulang</button><button class="btn o" style="flex:none" onclick="statExport()">Unduh CSV</button></div>';
   if(LOGS_ST==='loading') return head+'<div class="card" style="color:var(--muted)">Memuat data login...</div>';
