@@ -651,7 +651,7 @@ function delUser(id){
 }
 
 function resetUsers(){
-  if(!window.CURRENT||window.CURRENT.role!=='pemilik') return alert('Hanya pemilik');
+  if(!window.CURRENT||!['pemilik','dev'].includes(window.CURRENT.role)) return alert('Hanya pemilik');
   if(confirm('Reset semua akun ke default (pemilik/kasir/gudang)? Password lama dihapus di semua perangkat.')){
     USERS=DEFAULT_USERS.slice(); saveUsers(); syncUsers(true); go('users');
   }
@@ -1124,7 +1124,7 @@ function statExport(){
   document.body.appendChild(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),1500);
 }
 P.stat=()=>{
-  if(!window.CURRENT||window.CURRENT.role!=='pemilik') return '<div class="card">Hanya pemilik yang dapat melihat halaman ini.</div>';
+  if(!window.CURRENT||!['pemilik','dev'].includes(window.CURRENT.role)) return '<div class="card">Hanya pemilik yang dapat melihat halaman ini.</div>';
   if(LOGS_ST==='idle'){LOGS_ST='loading';loadLogs()}
   const head='<div class="row" style="align-items:center;margin-bottom:12px"><div style="flex:1;color:var(--muted);font-size:12px">Waktu login, alamat IP, dan perkiraan lokasi (berdasarkan IP) tiap pengguna.</div><button class="btn o" style="flex:none" onclick="LOGS_ST=\'idle\';statRender()">↻ Muat ulang</button><button class="btn o" style="flex:none" onclick="statExport()">Unduh CSV</button></div>';
   if(LOGS_ST==='loading') return head+'<div class="card" style="color:var(--muted)">Memuat data login...</div>';
@@ -1250,7 +1250,7 @@ const backupCard=()=>{
   '<div style="margin-top:12px"><label style="font-size:11px;color:var(--muted)">PULIHKAN DARI FILE BACKUP</label><br><input type="file" accept=".json,application/json" style="margin-top:6px;font-size:12px" onchange="restoreBackup(this)"></div></div>';
 };
 const backupBanner=()=>{
-  if(!window.CURRENT||window.CURRENT.role!=='pemilik') return '';
+  if(!window.CURRENT||!['pemilik','dev'].includes(window.CURRENT.role)) return '';
   const d=daysSinceBackup();
   if(d!==null&&d<7) return '';
   return '<div class="card" style="border-color:#e8b4b8;background:#fff5f5;margin-bottom:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap"><span><strong>⚠ '+(d===null?'Belum pernah backup.':'Sudah '+d+' hari belum backup.')+'</strong> Unduh salinan data agar aman.</span><button class="btn" onclick="downloadBackup()">Backup sekarang</button></div>';
