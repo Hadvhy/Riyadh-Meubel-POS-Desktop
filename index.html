@@ -589,7 +589,14 @@ function closeModal(){document.getElementById('modal').classList.remove('show')}
 function printReceipt(){if(!lastReceipt)return;const t=lastReceipt;const w=window.open('','_blank','width=360,height=650');if(!w)return toast('Izinkan pop-up');
   w.document.write('<html><head><title>'+t.no+'</title><style>body{font:13px monospace;width:72mm;margin:8px auto}h2,h3,p{margin:4px 0;text-align:center}table{width:100%}td:last-child{text-align:right}hr{border:0;border-top:1px dashed #000}</style></head><body><h2>'+E(S.nama)+'</h2><p>'+E(S.alamat)+'</p><p>'+E(S.telp)+'</p><hr>No: '+t.no+'<br>Tgl: '+t.tgl+'<br>Pel: '+E(t.pelanggan)+'<hr><table>'+t.items.map(i=>'<tr><td colspan=2>'+E(i.nama)+'</td></tr><tr><td>'+i.qty+' x '+Math.round(i.harga).toLocaleString('id-ID')+'</td><td>'+Math.round(i.qty*i.harga).toLocaleString('id-ID')+'</td></tr>').join('')+'</table><hr><table><tr><td>Diskon</td><td>'+Math.round(t.diskon).toLocaleString('id-ID')+'</td></tr><tr><td><b>Total</b></td><td><b>'+Math.round(t.total).toLocaleString('id-ID')+'</b></td></tr><tr><td>'+t.metode+'</td><td>'+Math.round(t.bayar).toLocaleString('id-ID')+'</td></tr><tr><td>Kembali</td><td>'+Math.round(Math.max(t.bayar-t.total,0)).toLocaleString('id-ID')+'</td></tr></table><hr><p>Terima kasih</p><script>onload=()=>print()<\/script></body></html>');w.document.close()}
 
-P.beli=()=>'<div class="card"><h3>Pembelian dari Supplier</h3><div class="row"><input list="dlSupplier" autocomplete="off" placeholder="Ketik atau pilih supplier" value="'+E(V.supplier)+'" oninput="V.supplier=this.value" onchange="V.supplier=this.value"><datalist id="dlSupplier">'+DB.Supplier.map(x=>'<option value="'+E(x.nama)+'">'+E(x.telp||'')+'</option>').join('')+'</datalist><select onchange="addBeli(this.value)"><option value="">+ Tambah produk</option>'+DB.Produk.map(p=>'<option value="'+p.id+'">'+E(p.nama)+'</option>').join('')+'</select></div><div class="table-wrap"><table><tr><th>Produk<th>Jumlah<th>Harga Beli<th class="right">Subtotal<th></tr>'+B.map((i,n)=>'<tr><td>'+E(i.nama)+'<td><input type="number" value="'+i.qty+'" style="width:70px" onchange="B['+n+'].qty=+this.value;go(\'beli\')"><td><input type="number" value="'+i.harga+'" style="width:120px" onchange="B['+n+'].harga=+this.value;go(\'beli\')"><td class="right">'+R(i.qty*i.harga)+'<td><button class="btn x" onclick="B.splice('+n+',1);go(\'beli\')">Hapus</button></tr>').join('')+'</table></div><p style="margin:12px 0">Total <strong style="font-size:20px;color:#68482d">'+R(sum(B,i=>i.qty*i.harga))+'</strong></p><button class="btn" onclick="simpanBeli()">Simpan & Tambah Stok</button></div><div class="card"><h3>Riwayat Pembelian</h3><div class="table-wrap"><table>'+DB.Pembelian.slice().reverse().slice(0,20).map(x=>'<tr><td>'+x.tgl+'<td>'+E(x.supplier)+'<td>'+x.items.map(i=>E(i.nama)+' ×'+i.qty).join(', ')+'<td class="right">'+R(x.total)+'</tr>').join('')+'</table></div></div>';
+P.beli=()=>'<div class="card"><h3>Pembelian dari Supplier</h3><div class="row"><input list="dlSupplier" autocomplete="off" placeholder="Ketik atau pilih supplier" value="'+E(V.supplier)+'" oninput="V.supplier=this.value" onchange="V.supplier=this.value"><datalist id="dlSupplier">'+DB.Supplier.map(x=>'<option value="'+E(x.nama)+'">'+E(x.telp||'')+'</option>').join('')+'</datalist><select onchange="addBeli(this.value)"><option value="">+ Tambah produk</option>'+DB.Produk.map(p=>'<option value="'+p.id+'">'+E(p.nama)+'</option>').join('')+'</select></div><div class="table-wrap"><table><tr><th>Produk<th>Jumlah<th>Harga Beli<th class="right">Subtotal<th></tr>'+B.map((i,n)=>'<tr><td>'+E(i.nama)+'<td><input type="number" value="'+i.qty+'" style="width:70px" onchange="B['+n+'].qty=+this.value;go(\'beli\')"><td><input type="number" value="'+i.harga+'" style="width:120px" onchange="B['+n+'].harga=+this.value;go(\'beli\')"><td class="right">'+R(i.qty*i.harga)+'<td><button class="btn x" onclick="B.splice('+n+',1);go(\'beli\')">Hapus</button></tr>').join('')+'</table></div><p style="margin:12px 0">Total <strong style="font-size:20px;color:#68482d">'+R(sum(B,i=>i.qty*i.harga))+'</strong></p><button class="btn" onclick="simpanBeli()">Simpan & Tambah Stok</button></div><div class="card"><h3>Riwayat Pembelian</h3><div class="table-wrap"><table><tr><th>Tanggal<th>Supplier<th>Barang<th class="right">Total<th></tr>'+DB.Pembelian.slice().reverse().slice(0,20).map(x=>'<tr><td>'+x.tgl+'<td>'+E(x.supplier)+'<td>'+x.items.map(i=>E(i.nama)+' ×'+i.qty).join(', ')+'<td class="right">'+R(x.total)+'<td>'+(['pemilik','dev'].includes(window.CURRENT.role)?'<button class="btn x" onclick="delBeli(\''+x.id+'\')">Hapus</button>':'')+'</tr>').join('')+'</table></div></div>';
+function delBeli(id){
+  const x=DB.Pembelian.find(v=>v.id===id); if(!x) return;
+  if(!confirm('Hapus riwayat pembelian ini? Stok produk yang tadinya bertambah akan dikurangi kembali.')) return;
+  (x.items||[]).forEach(i=>{ const p=DB.Produk.find(v=>v.id===i.id); if(p) p.stok=Math.max(0,+p.stok-(+i.qty||0)); });
+  DB.Pembelian=DB.Pembelian.filter(v=>v.id!==id);
+  sync('Pembelian'); sync('Produk'); go('beli');
+}
 function addBeli(id){if(!id)return;const p=DB.Produk.find(x=>x.id===id);if(!B.find(x=>x.id===id))B.push({id,nama:p.nama,qty:1,harga:+p.harga_beli});go('beli')}
 function simpanBeli(){if(!B.length)return alert('Pilih produk');B.forEach(i=>{const p=DB.Produk.find(x=>x.id===i.id);if(p){p.stok=+p.stok+i.qty;p.harga_beli=i.harga}});DB.Pembelian.push({id:uid(),tgl:today(),supplier:canonNama('Supplier',V.supplier)||'-',items:B.map(i=>({...i})),total:sum(B,i=>i.qty*i.harga)});sync('Pembelian');sync('Produk');ensureMitra('Supplier',V.supplier);B=[];V={supplier:''};toast('Stok bertambah');go('beli')}
 
@@ -615,10 +622,17 @@ P.lap=()=>{
   return '<div class="card"><div class="row"><input type="date" value="'+D1+'" onchange="D1=this.value;go(\'lap\')"><input type="date" value="'+D2+'" onchange="D2=this.value;go(\'lap\')"></div></div>'+
   '<div class="stats"><div class="stat"><div class="stat-top">Omzet</div><strong>'+R(om)+'</strong></div><div class="stat"><div class="stat-top">Laba Kotor</div><strong>'+R(lk)+'</strong></div><div class="stat"><div class="stat-top">Pengeluaran</div><strong>'+R(bx)+'</strong></div><div class="stat"><div class="stat-top">Laba Bersih</div><strong>'+R(lk-bx)+'</strong></div></div>'+
   '<div class="card"><h3>Transaksi Penjualan</h3><div class="table-wrap"><table><tr><th>No<th>Tanggal<th>Pelanggan<th>Metode<th class="right">Total<th></tr>'+
-  J.slice().reverse().map(x=>'<tr><td>'+x.no+'<td>'+x.tgl+'<td>'+E(x.pelanggan)+'<td>'+x.metode+'<td class="right">'+R(x.total)+'<td><button class="btn o" onclick="reprint(\''+x.id+'\')">Cetak</button></tr>').join('')||'<tr><td colspan="6" style="color:var(--muted)">Tidak ada transaksi.</td></tr>'+
+  J.slice().reverse().map(x=>'<tr><td>'+x.no+'<td>'+x.tgl+'<td>'+E(x.pelanggan)+'<td>'+x.metode+'<td class="right">'+R(x.total)+'<td><button class="btn o" onclick="reprint(\''+x.id+'\')">Cetak</button> '+(['pemilik','dev'].includes(window.CURRENT.role)?'<button class="btn x" onclick="delJual(\''+x.id+'\')">Hapus</button>':'')+'</tr>').join('')||'<tr><td colspan="6" style="color:var(--muted)">Tidak ada transaksi.</td></tr>'+
   '</table></div></div>';
 };
 function reprint(id){lastReceipt=DB.Penjualan.find(x=>x.id===id);if(lastReceipt)printReceipt()}
+function delJual(id){
+  const x=DB.Penjualan.find(v=>v.id===id); if(!x) return;
+  if(!confirm('Hapus transaksi penjualan '+x.no+'? Stok barang yang tadinya terjual akan dikembalikan.')) return;
+  (x.items||[]).forEach(i=>{ const p=DB.Produk.find(v=>v.id===i.id); if(p) p.stok=+p.stok+(+i.qty||0); });
+  DB.Penjualan=DB.Penjualan.filter(v=>v.id!==id);
+  sync('Penjualan'); sync('Produk'); go('lap');
+}
 
 P.set=()=>'<div class="card"><h3>Profil Toko</h3><div style="display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap"><div><label style="font-size:10px;color:var(--muted)">LOGO TOKO</label><div class="logo-preview" id="logoPrev">'+(S.logo?'<img src="'+S.logo+'">':'<span style="color:var(--muted);font-size:12px">Belum ada logo</span>')+'</div><input type="file" accept="image/*" style="margin-top:8px;font-size:12px" onchange="uploadLogo(this)">'+(S.logo?'<button class="btn x" style="margin-top:6px" onclick="S.logo=\'\';saveS();syncSettings();go(\'set\')">Hapus Logo</button>':'')+'</div><div style="flex:1;min-width:250px"><div class="row"><input id="sn" placeholder="Nama toko" value="'+E(S.nama)+'"></div><div class="row"><input id="sa" placeholder="Alamat" value="'+E(S.alamat)+'"></div><div class="row"><input id="st" placeholder="Telepon / WhatsApp" value="'+E(S.telp||'')+'"></div><div class="row"><input id="ss" placeholder="Slogan / tagline" value="'+E(S.slogan||'')+'"></div></div></div><div class="row" style="margin-top:12px"><button class="btn" onclick="simpanSet()">Simpan Pengaturan</button></div></div>';
 function uploadLogo(input){const f=input.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{shrinkLogo(r.result,out=>{if(!out){alert('Logo tidak bisa diproses atau terlalu kompleks. Gunakan gambar yang lebih sederhana.');return}S.logo=out;saveS();syncSettings();go('set');toast('Logo diunggah')})};r.readAsDataURL(f)}
@@ -1264,15 +1278,30 @@ function resetDataLokal(){
   try{localStorage.clear()}catch(e){}
   location.reload();
 }
+const KUNCI_TRANSAKSI=['Produk','Penjualan','Pembelian','Pengeluaran','Pelanggan','Supplier','Pengiriman'];
+function kosongkanUntukPembeli(){
+  const kata=prompt(
+    'Ini akan MENGOSONGKAN data Produk, Penjualan, Pembelian, Pengeluaran, Pelanggan, Supplier, dan Pengiriman'+
+    (S.url?' -- di perangkat ini DAN di Spreadsheet yang terhubung sekarang.':' di perangkat ini.')+
+    '\nAkun login (Pemilik/Kasir/Gudang) dan profil toko (nama, alamat, logo) TIDAK ikut berubah.'+
+    '\nCocok dipakai saat aplikasi ini mau diserahkan ke pembeli baru.'+
+    '\n\nKetik KOSONGKAN untuk lanjut:'
+  );
+  if(kata!=='KOSONGKAN') return;
+  KUNCI_TRANSAKSI.forEach(k=>{ DB[k]=[]; });
+  normDB(); saveDB();
+  if(S.url) KUNCI_TRANSAKSI.forEach(k=>sync(k,true));
+  toast('Data transaksi & produk sudah dikosongkan'); go('devtools');
+}
 P.devtools=()=>{
   if(!window.CURRENT||window.CURRENT.role!=='dev') return '<div class="card">Khusus akun developer.</div>';
-  const kunci=['Produk','Penjualan','Pembelian','Pengeluaran','Pelanggan','Supplier','Pengiriman'];
-  const jumlah=kunci.map(k=>'<tr><td>'+E(k)+'<td>'+((DB[k]||[]).length)+'</tr>').join('');
+  const jumlah=KUNCI_TRANSAKSI.map(k=>'<tr><td>'+E(k)+'<td>'+((DB[k]||[]).length)+'</tr>').join('');
   return '<div class="card"><h3>Info Aplikasi</h3>'+
     '<div class="table-wrap"><table><tr><th>Data<th>Jumlah baris</tr>'+jumlah+'</table></div>'+
     '<p style="color:var(--muted);font-size:12px;margin-top:10px">URL Spreadsheet: '+(S.url?'<span style="color:#2a7a2a">terhubung</span>':'<span style="color:#b33">belum diatur</span>')+' &middot; Jumlah user tercatat: '+USERS.length+'</p></div>'+
     '<div class="card"><h3>Backup &amp; Pemulihan</h3><div class="row"><button class="btn" onclick="downloadBackup()">Unduh backup JSON</button><label class="btn o" style="cursor:pointer">Pulihkan dari file<input type="file" accept="application/json" style="display:none" onchange="restoreBackup(this)"></label></div></div>'+
-    '<div class="card" style="border-color:#e8b4b8;background:#fff5f5"><h3>Zona Berbahaya</h3><p style="font-size:12px;color:var(--muted)">Menghapus seluruh data yang tersimpan di perangkat ini (localStorage). Tidak bisa dibatalkan kecuali dari backup.</p><button class="btn x" onclick="resetDataLokal()">Hapus semua data perangkat ini</button></div>'+
+    '<div class="card" style="border-color:#f0d58c;background:#fffaf0"><h3>Serah Terima ke Pembeli</h3><p style="font-size:12px;color:var(--muted)">Mengosongkan Produk, Penjualan, Pembelian, Pengeluaran, Pelanggan, Supplier &amp; Pengiriman'+(S.url?' (di perangkat ini dan di Spreadsheet yang terhubung).':' (di perangkat ini).')+' Akun login &amp; profil toko tidak berubah. Sebaiknya unduh backup dulu sebelum dipakai.</p><button class="btn" style="background:#b8860b" onclick="kosongkanUntukPembeli()">Kosongkan data untuk pembeli baru</button></div>'+
+    '<div class="card" style="border-color:#e8b4b8;background:#fff5f5"><h3>Zona Berbahaya</h3><p style="font-size:12px;color:var(--muted)">Menghapus seluruh data yang tersimpan di perangkat ini (localStorage), termasuk pengguna &amp; pengaturan. Tidak bisa dibatalkan kecuali dari backup.</p><button class="btn x" onclick="resetDataLokal()">Hapus semua data perangkat ini</button></div>'+
     '<div class="card"><h3>Catatan</h3><p style="font-size:12px;color:var(--muted)">Login akun developer tidak tercatat di menu Statistik Pengguna, log login di Spreadsheet, atau daftar Manajemen Pengguna.</p></div>';
 };
 
