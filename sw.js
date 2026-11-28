@@ -2,7 +2,7 @@
 // Tujuan: membuat aplikasi bisa di-install dan membuka tampilan dasar saat sinyal putus.
 // Data (Google Apps Script) TIDAK PERNAH disimpan di cache, supaya transaksi selalu terbaru.
 // Naikkan angka VERSI setiap kali Anda mengubah file aplikasi agar semua perangkat ikut memperbarui.
-const VERSI = 'v1';
+const VERSI = 'v2';
 const CACHE = 'riyadh-pos-' + VERSI;
 const FILE_DASAR = [
   './',
