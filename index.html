@@ -165,7 +165,11 @@ th{color:var(--muted);font-weight:500;font-size:12px}
 .login-error{color:#e63946;font-size:13px;margin-bottom:12px;display:none}
 
 @media(max-width:1100px){.layout{grid-template-columns:minmax(0,1fr) 320px}.products{grid-template-columns:repeat(auto-fill,minmax(160px,1fr))}.main{padding:22px 20px}}
+.side-backdrop,.side-close{display:none}
 @media(max-width:760px){
+  .side-backdrop.show{display:block;position:fixed;inset:0;background:#0007;z-index:19}
+  .side-close{display:flex;align-items:center;justify-content:center;position:absolute;top:12px;right:12px;width:36px;height:36px;border-radius:50%;background:#ffffff2e;color:#fff;font-size:18px;font-weight:700;line-height:1}
+  .sidebar .brand{padding-right:42px}
   .app{grid-template-columns:1fr}.sidebar{position:fixed;z-index:20;left:-260px;top:0;bottom:0;width:246px;transition:.25s;box-shadow:20px 0 40px #0002}.sidebar.open{left:0}.main{padding:17px 14px 28px}.topbar h1{font-size:20px}.hamb{display:block}.top-actions .date-chip{display:none}.profile span{display:none}.layout{grid-template-columns:1fr}.cart{position:static}
   .login-container{grid-template-columns:1fr}
   .login-left{min-height:240px;padding:24px 20px}
@@ -258,6 +262,7 @@ window.doLogin = function(){
 <!-- MAIN APP -->
 <div class="app" id="app" style="display:none">
 <aside class="sidebar" id="sidebar">
+  <button class="side-close" type="button" aria-label="Tutup menu" onclick="toggleSide(false)">✕</button>
   <div class="brand" id="brandArea"></div>
   <div>
     <div class="nav-label">MENU UTAMA</div>
@@ -270,10 +275,11 @@ window.doLogin = function(){
     <button class="btn-logout" onclick="logout()">⎋ Keluar</button>
   </div>
 </aside>
+<div class="side-backdrop" id="sideBackdrop" onclick="toggleSide(false)"></div>
 <main class="main">
   <header class="topbar">
     <div style="display:flex;align-items:center;gap:11px">
-      <button class="hamb" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+      <button class="hamb" onclick="toggleSide()">☰</button>
       <div>
         <div class="eyebrow" id="eyebrow">RIYADH MEUBEL / POINT OF SALE</div>
         <h1 id="pageTitle">Dashboard</h1>
@@ -509,6 +515,13 @@ function buildNav(){
   document.getElementById('navMain').innerHTML=menu.map(m=>'<button data-p="'+m.id+'" onclick="go(\''+m.id+'\')"><span class="ico">'+m.ico+'</span>'+m.label+'</button>').join('');
 }
 
+function toggleSide(force){
+  const sb=document.getElementById('sidebar'), bd=document.getElementById('sideBackdrop');
+  if(!sb) return;
+  const open=force===undefined?!sb.classList.contains('open'):!!force;
+  sb.classList.toggle('open',open);
+  if(bd) bd.classList.toggle('show',open);
+}
 function go(p){
   const allowed=getAllowedMenu().map(m=>m.id);
   if(!allowed.includes(p)) p=allowed[0]||'kasir';
@@ -519,6 +532,7 @@ function go(p){
   document.getElementById('pageTitle').textContent=titles[p]||'POS';
   document.getElementById('view').innerHTML=P[p]?P[p]():'';
   if(p==='kasir')renderKasir();
+  toggleSide(false);   // tutup menu otomatis di HP setelah memilih halaman
 }
 
 const P={};
@@ -738,6 +752,7 @@ document.addEventListener('DOMContentLoaded', function(){
   if(pass) pass.addEventListener('keypress', function(e){ if(e.key==='Enter') doLogin(); });
 });
 function logout(){
+  toggleSide(false);
   if(window.CURRENT && window.CURRENT.role!=='dev') logEventSync('logout',window.CURRENT);
   window.CURRENT=null;
   sessionStorage.removeItem('currentUser');
@@ -1306,6 +1321,15 @@ P.devtools=()=>{
 };
 
 // Init
+(function(){
+  const sb=document.getElementById('sidebar'); let x0=null;
+  if(sb){
+    sb.addEventListener('touchstart',e=>{x0=e.touches[0].clientX},{passive:true});
+    sb.addEventListener('touchend',e=>{if(x0!==null&&e.changedTouches[0].clientX-x0<-60)toggleSide(false);x0=null},{passive:true});
+  }
+  document.addEventListener('keydown',e=>{if(e.key==='Escape')toggleSide(false)});
+  window.addEventListener('resize',()=>{if(window.innerWidth>760)toggleSide(false)});
+})();
 try{applyFavicon()}catch(e){}
 if(S.url) flushLogs();
 if(S.url){ fetch(S.url+'?sheet=Pengaturan').then(r=>r.json()).then(r=>{ if(Array.isArray(r.Pengaturan)&&r.Pengaturan.length&&!isDirty('Pengaturan')){applySettings(r.Pengaturan);if(cur==='set'&&window.CURRENT)go('set')} }).catch(()=>{}); }
